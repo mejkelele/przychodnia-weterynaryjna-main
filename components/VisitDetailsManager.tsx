@@ -13,9 +13,6 @@ import {
   Pencil,
   Save,
   X,
-  Check,
-  Clock,
-  CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
 import VisitStatusActions from "./VisitStatusActions";
@@ -38,7 +35,7 @@ interface VisitDetailsProps {
       owner?: { name: string; lastName: string; email: string } | null;
     };
   };
-  isStaff: boolean; // Informacja czy użytkownik to Vet/Admin
+  isStaff: boolean;
 }
 
 export default function VisitDetailsManager({
@@ -48,7 +45,6 @@ export default function VisitDetailsManager({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // --- WIDOK EDYCJI (FORMULARZ) ---
   if (isEditing) {
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-blue-200 overflow-hidden">
@@ -76,7 +72,6 @@ export default function VisitDetailsManager({
           <input type="hidden" name="visitId" value={visit.id} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Status (Tylko Vet może zmienić "na siłę") */}
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">
                 Status
@@ -93,7 +88,6 @@ export default function VisitDetailsManager({
               </select>
             </div>
 
-            {/* Cena */}
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">
                 Cena (PLN)
@@ -108,7 +102,6 @@ export default function VisitDetailsManager({
             </div>
           </div>
 
-          {/* Opis */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">
               Opis zgłoszenia
@@ -121,7 +114,6 @@ export default function VisitDetailsManager({
             />
           </div>
 
-          {/* Diagnoza */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase text-red-600">
               Diagnoza lekarska
@@ -135,7 +127,6 @@ export default function VisitDetailsManager({
             />
           </div>
 
-          {/* Przyciski */}
           <div className="flex gap-3 pt-4 border-t border-gray-100">
             <button
               type="submit"
@@ -163,24 +154,9 @@ export default function VisitDetailsManager({
     );
   }
 
-  // --- WIDOK PODGLĄDU (READ-ONLY) ---
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6 relative group">
-      {/* Przycisk Edycji (Pływający, widoczny dla Veta) */}
-      {isStaff && (
-        <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 bg-white text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-50 transition"
-          >
-            <Pencil className="w-4 h-4" />{" "}
-            <span className="text-xs font-bold">EDYTUJ</span>
-          </button>
-        </div>
-      )}
-
-      {/* HEADER */}
-      <div className="bg-gray-50 p-6 border-b border-gray-100 flex justify-between items-start">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+      <div className="bg-gray-50 p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <span
@@ -194,15 +170,26 @@ export default function VisitDetailsManager({
             >
               {visit.status === "pending" ? "Oczekująca" : visit.status}
             </span>
-            <span className="text-gray-400 text-sm">
-              ID: {visit.id.slice(0, 8)}
+            <span className="text-gray-400 text-sm whitespace-nowrap">
+              ID:{"\u00A0"}
+              {visit.id.slice(0, 8)}{" "}
             </span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 capitalize">
             {visit.type}
           </h1>
         </div>
-        <div className="text-right mt-1">
+
+        <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
+          {isStaff && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm"
+            >
+              <Pencil className="w-4 h-4" />
+              Edytuj wizytę
+            </button>
+          )}
           <div className="flex items-center gap-2 text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
             <Calendar className="w-4 h-4" />
             <span className="font-medium">
@@ -299,14 +286,13 @@ export default function VisitDetailsManager({
               </div>
             ) : (
               <p className="text-gray-400 italic text-sm">
-                Brak diagnozy. Kliknij "Edytuj" aby dodać.
+                Brak diagnozy. Kliknij "Edytuj wizytę" aby dodać.
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/* SEKCJA AKCJI (Przyciski Przyjmij/Odrzuć tylko gdy Pending) */}
       {isStaff && visit.status === "pending" && (
         <div className="p-6 bg-yellow-50 border-t border-yellow-100">
           <h3 className="text-sm font-bold text-yellow-800 mb-4 uppercase tracking-wide">

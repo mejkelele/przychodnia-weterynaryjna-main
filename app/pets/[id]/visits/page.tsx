@@ -1,25 +1,23 @@
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/session";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import VisitSection from "@/components/VisitSection"; // Upewnij się, że masz ten komponent z poprzednich kroków
+import VisitSection from "@/components/VisitSection";
+import { getRequiredUserContext } from "@/lib/user-context";
 
 interface VisitsPageProps {
   params: Promise<{ id: string }>;
 }
 
-// Wyłączamy cache, żeby zawsze widzieć świeże wizyty
 export const dynamic = "force-dynamic";
 
 export default async function PetVisitsPage({ params }: VisitsPageProps) {
-  // 1. Sprawdzamy sesję
-  const session = await getSession();
-  if (!session || !session.userId) redirect("/login");
+  const { userId, role, isStaff } = await getRequiredUserContext();
 
   const resolvedParams = await params;
   const petId = resolvedParams.id;
 
+  // pobieranie danych
   const pet = await db.pet.findUnique({
     where: { id: petId },
     select: { id: true, name: true, ownerId: true },
@@ -27,20 +25,12 @@ export default async function PetVisitsPage({ params }: VisitsPageProps) {
 
   if (!pet) return notFound();
 
-  const userId = session.userId as string;
-
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-  const role = user?.role?.trim().toLowerCase() || "guest";
-  const isStaff = role === "admin" || role === "vet";
-
-  if (!isStaff && pet.ownerId !== session.userId) {
+  if (!isStaff && pet.ownerId !== userId) {
     return notFound();
   }
 
-  const visits = await db.visit.findMany({
+  // pobieranie wizyt
+  const rawVisits = await db.visit.findMany({
     where: { petId: petId },
     orderBy: { date: "desc" },
     include: {
@@ -48,9 +38,13 @@ export default async function PetVisitsPage({ params }: VisitsPageProps) {
     },
   });
 
+  const sanitizedVisits = rawVisits.map((visit) => ({
+    ...visit,
+    diagnosis: visit.diagnosis ?? "",
+  }));
+
   return (
     <div className="max-w-5xl mx-auto p-6">
-      {/* Nawigacja powrotna */}
       <div className="mb-6">
         <Link
           href={`/pets/${petId}`}
@@ -72,8 +66,7 @@ export default async function PetVisitsPage({ params }: VisitsPageProps) {
           </p>
         </div>
 
-        {/* To jest ten komponent, który ma Formularz + Listę */}
-        <VisitSection petId={pet.id} visits={visits} userRole={role} />
+        <VisitSection petId={pet.id} visits={sanitizedVisits} userRole={role} />
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import {
   createVisitAction,
   acceptVisitAction,
   rejectVisitAction,
-} from "@/lib/actions"; // <--- Nowe importy
+} from "@/lib/actions";
 import { useTransition, useRef, useState } from "react";
 import {
   Calendar,
@@ -44,7 +44,6 @@ export default function VisitSection({
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Stan do obsługi "trybu akceptacji" dla konkretnej wizyty
   const [acceptingVisitId, setAcceptingVisitId] = useState<string | null>(null);
 
   const isStaff = userRole === "admin" || userRole === "vet";
@@ -57,7 +56,6 @@ export default function VisitSection({
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* FORMULARZ DODAWANIA (Owner wysyła prośbę, Vet dodaje gotową) */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm sticky top-4">
             <h3 className="font-semibold text-gray-900 mb-4">
@@ -147,7 +145,6 @@ export default function VisitSection({
           </div>
         </div>
 
-        {/* LISTA WIZYT */}
         <div className="lg:col-span-2 space-y-4">
           {visits.length === 0 ? (
             <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
@@ -164,7 +161,6 @@ export default function VisitSection({
                     : "bg-yellow-50 border-yellow-200"
                 }`}
               >
-                {/* Header wizyty */}
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
                     <div
@@ -235,10 +231,8 @@ export default function VisitSection({
                   </div>
                 </div>
 
-                {/* --- SEKCJA AKCEPTACJI DLA VETA --- */}
                 {isStaff && visit.status === "pending" && (
                   <div className="mt-4 pt-3 border-t border-yellow-200">
-                    {/* Jeśli kliknięto "Przyjmij", pokaż formularz ceny */}
                     {acceptingVisitId === visit.id ? (
                       <form
                         action={async (formData) => {
@@ -281,7 +275,6 @@ export default function VisitSection({
                         </button>
                       </form>
                     ) : (
-                      /* Domyślne przyciski */
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => setAcceptingVisitId(visit.id)}

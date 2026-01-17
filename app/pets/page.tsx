@@ -1,52 +1,58 @@
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
 import PetCard from "@/components/PetCard";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import SearchPets from "@/components/SearchPets";
 import { Prisma } from "@prisma/client";
+import { getRequiredUserContext } from "@/lib/user-context";
 
 export const dynamic = "force-dynamic";
 
-// Props odbierają parametry z URL (np. ?query=burek&species=pies)
 export default async function PetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string; species?: string }>;
+  searchParams: Promise<{
+    query?: string;
+    species?: string;
+    ownerQuery?: string;
+  }>;
 }) {
-  const session = await getSession();
-  if (!session || !session.userId) redirect("/login");
+  const { userId, role, isStaff } = await getRequiredUserContext();
 
-  // Pobieramy paramsy (w Next 15 to Promise)
   const params = await searchParams;
   const query = params.query || "";
   const species = params.species || "";
-
-  // Pobieramy rolę
-  const user = await db.user.findUnique({
-    where: { id: session.userId },
-    select: { role: true },
-  });
-  const currentRole = user?.role || "owner";
-
-  // --- BUDOWANIE ZAPYTANIA (Data Engineering Style) ---
-  // Zamiast if-else, budujemy obiekt where dynamicznie.
+  const ownerQuery = params.ownerQuery || "";
 
   const whereClause: Prisma.PetWhereInput = {
     AND: [
-      // 1. Filtr bezpieczeństwa (kto co widzi)
-      currentRole === "owner" ? { ownerId: session.userId } : {},
+      // 1. Ograniczenie widoczności (Owner widzi tylko swoje)
+      !isStaff ? { ownerId: userId } : {},
 
-      // 2. Wyszukiwanie po imieniu (insensitive = ignoruj wielkość liter)
-      query ? { name: { contains: query } } : {}, // Usunąłem mode: 'insensitive' bo SQLite tego nie wspiera natywnie w Prismie (chyba że masz Postgres), ale SQLite domyślnie jest case-insensitive dla LIKE.
+      // 2. Szukanie po imieniu zwierzaka
+      query ? { name: { contains: query } } : {},
 
       // 3. Filtr po gatunku
       species ? { species: species } : {},
+
+      // 4. Szukanie po właścicielu (TYLKO DLA PERSONELU)
+      // Jeśli isStaff=false, to nawet jak ktoś wpisze ?ownerQuery=X, zostanie to zignorowane.
+      isStaff && ownerQuery
+        ? {
+            owner: {
+              OR: [
+                { name: { contains: ownerQuery } },
+                { lastName: { contains: ownerQuery } },
+                { email: { contains: ownerQuery } },
+                { phone: { contains: ownerQuery } },
+              ],
+            },
+          }
+        : {},
     ],
   };
 
-  // Wykonanie zapytania z filtrami
+  // pobieranie danych
   const pets = await db.pet.findMany({
     where: whereClause,
     orderBy: { createdAt: "desc" },
@@ -58,20 +64,20 @@ export default async function PetsPage({
   });
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Nagłówek */}
+    <div className="max-w-7xl mx-auto p-4 sm:p-6">
+      {/* header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pacjenci</h1>
           <div className="flex items-center gap-2 mt-1">
             <span
-              className={`text-xs font-medium px-2 py-0.5 rounded ${
-                ["admin", "vet"].includes(currentRole)
+              className={`text-xs font-medium px-2 py-0.5 rounded uppercase ${
+                isStaff
                   ? "bg-purple-100 text-purple-700"
                   : "bg-green-100 text-green-700"
               }`}
             >
-              {currentRole.toUpperCase()}
+              {role}
             </span>
             <span className="text-xs text-gray-500">
               • Wyników: {pets.length}
@@ -88,17 +94,17 @@ export default async function PetsPage({
         </Link>
       </div>
 
-      {/* --- TUTAJ WSTAWIAMY FILTRY --- */}
-      <SearchPets />
+      {/* Przekazujemy isStaff do komponentu wyszukiwania */}
+      <SearchPets isStaff={isStaff} />
 
-      {/* Lista Kart */}
+      {/* lista kart */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {pets.map((pet) => (
-          <PetCard key={pet.id} pet={pet} />
+          <PetCard key={pet.id} pet={pet as any} />
         ))}
       </div>
 
-      {/* Pusty stan */}
+      {/* pusty stan */}
       {pets.length === 0 && (
         <div className="text-center py-12 px-4 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
           <div className="mx-auto w-12 h-12 text-gray-400 mb-3">
@@ -106,7 +112,7 @@ export default async function PetsPage({
           </div>
           <h3 className="text-lg font-medium text-gray-900">Brak wyników</h3>
           <p className="text-gray-500 mt-1 max-w-sm mx-auto">
-            {query || species
+            {query || species || (isStaff && ownerQuery)
               ? "Nie znaleziono pacjentów pasujących do filtrów."
               : "Baza danych jest pusta."}
           </p>

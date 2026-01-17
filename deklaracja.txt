@@ -1,0 +1,17 @@
+Temat: Przychodnia Weterynaryjna
+Opis: Aplikacje webowa wspierająca zarządzanie przychodznię weterynaryjną. 
+Funkcjonalność:
+- konta użytkowników + konto właściciela
+Dane użytkownika: imie, nazwisko, email, numer telefonu
+Użytkownik ma dostep do kalendarza, do listy swoich zwierząt, do wizyt oraz historii wizyt. 
+Właściciel ma dostęp do kalendarza (więcej funkcji), dostęp do listy klientów i ich zwierząt oraz liste wizyt (bardziej rozbudowaną)
+- profile dla zwierzat 
+Imie zwierzaka, gatunek zwierzęcia, waga, rok urodzenia, id wlaściciela. Dodawanie zwierząt będzie odbywac sie poprzez formularz.
+- możliwość posiadania wielu zwierząt
+Do jednego konta może być przypisane wiele zwierząt.
+- kalendarz do umawinia wizyt 
+Możliwość umówienia konkretnego zwierzęcia na konkretną godzinę konkretnego dnia.
+- mail z powiadomieniem o zapisaniu się na wizytę
+Mail będzie przychodził w momencie umówienia się na wizytę z infromacją podsumowującą.
+- wizyty
+Każda wizyta ma swój typ. np. szczepienie, kontrola, zabieg, wizyta online. Każdy typ wizyty ma swój indywidualny cennik. Wizyta będzie miała takie pola jak: data, godzina, czy się odbyła, cena, notatka od lekarza.

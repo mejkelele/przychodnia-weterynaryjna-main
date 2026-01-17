@@ -2,15 +2,28 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import GlobalVisitsList from "@/components/VisitsList";
-import { CalendarDays } from "lucide-react";
+import SearchVisits from "@/components/SearchVisits";
+import { CalendarDays, Plus } from "lucide-react";
+import Link from "next/link";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function VisitsPage() {
+export default async function VisitsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    petQuery?: string;
+    ownerQuery?: string;
+    vetId?: string;
+    showPast?: string;
+    status?: string;
+    sort?: string;
+  }>;
+}) {
   const session = await getSession();
   if (!session || !session.userId) redirect("/login");
 
-  // 1. Pobieramy rolę
   const userId = session.userId as string;
 
   const user = await db.user.findUnique({
@@ -20,23 +33,66 @@ export default async function VisitsPage() {
   const role = user?.role?.trim().toLowerCase() || "guest";
   const isStaff = role === "admin" || role === "vet";
 
-  // 2. Budujemy zapytanie (WHERE)
-  // Jeśli to Owner -> pokaż wizyty JEGO zwierzaków.
-  // Jeśli to Vet -> pokaż WSZYSTKIE.
-  const whereClause = isStaff
-    ? {} // Pusty obiekt = brak filtrów = wszystko
-    : { pet: { ownerId: session.userId } }; // Filtr dla właściciela
+  const params = await searchParams;
+  const petQuery = params.petQuery || "";
+  const ownerQuery = params.ownerQuery || "";
+  const showPast = params.showPast === "true";
+  const statusParam = params.status || ""; // Odczytujemy status
+  const rawVetParam = params.vetId;
+  const sortDirection = params.sort === "desc" ? "desc" : "asc"; // Tylko kierunek
 
-  // 3. Pobieramy dane
+  let vetIdFilter: string | undefined = undefined;
+  if (rawVetParam === "all") vetIdFilter = undefined;
+  else if (rawVetParam) vetIdFilter = rawVetParam;
+  else if (isStaff && role === "vet") vetIdFilter = userId;
+
+  // 4. Lista lekarzy
+  const vets = isStaff
+    ? await db.user.findMany({
+        where: { role: "vet" },
+        select: { id: true, name: true, lastName: true },
+      })
+    : [];
+
+  // 5. WHERE
+  const whereClause: Prisma.VisitWhereInput = {
+    AND: [
+      !isStaff ? { pet: { ownerId: userId } } : {},
+      !showPast ? { date: { gte: new Date() } } : {},
+
+      // Filtr po Statusie (NOWE)
+      statusParam ? { status: statusParam } : {},
+
+      petQuery ? { pet: { name: { contains: petQuery } } } : {},
+      isStaff && ownerQuery
+        ? {
+            pet: {
+              owner: {
+                OR: [
+                  { name: { contains: ownerQuery } },
+                  { lastName: { contains: ownerQuery } },
+                  { email: { contains: ownerQuery } },
+                ],
+              },
+            },
+          }
+        : {},
+      vetIdFilter ? { vetId: vetIdFilter } : {},
+    ],
+  };
+
+  // 6. Pobranie danych (Sortowanie tylko po dacie)
   const visits = await db.visit.findMany({
     where: whereClause,
-    orderBy: { date: "desc" }, // Najnowsze na górze
+    orderBy: { date: sortDirection }, // 'asc' lub 'desc'
     include: {
       pet: {
         select: {
           id: true,
           name: true,
-          owner: { select: { name: true, lastName: true } }, // Pobieramy dane właściciela dla Veta
+          owner: {
+            select: { name: true, lastName: true, email: true, phone: true },
+          },
         },
       },
       vet: {
@@ -46,19 +102,43 @@ export default async function VisitsPage() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      {/* Nagłówek */}
-      <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-200">
-        <div className="bg-blue-100 p-3 rounded-xl text-blue-600">
-          <CalendarDays className="w-8 h-8" />
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-200">
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-100 p-3 rounded-xl text-blue-600">
+            <CalendarDays className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Terminarz Wizyt
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm text-gray-500">
+                Znaleziono: {visits.length}
+              </span>
+            </div>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Terminarz Wizyt</h1>
-        </div>
+
+        <Link
+          href="/visits/add"
+          className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-medium transition-colors shadow-sm text-sm"
+        >
+          <Plus className="w-5 h-5" />
+          Dodaj wizytę
+        </Link>
       </div>
 
-      {/* Lista */}
-      <GlobalVisitsList visits={visits} userRole={role} />
+      <SearchVisits
+        isStaff={isStaff}
+        vets={vets}
+        currentUserId={userId}
+        userRole={role}
+      />
+
+      <div className="mt-6">
+        <GlobalVisitsList visits={visits} userRole={role} />
+      </div>
     </div>
   );
 }

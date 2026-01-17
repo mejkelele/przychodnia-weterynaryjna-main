@@ -1,11 +1,11 @@
 // app/visits/[id]/page.tsx
 
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/session";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import VisitDetailsManager from "@/components/VisitDetailsManager"; // <--- Import nowego komponentu
+import VisitDetailsManager from "@/components/VisitDetailsManager";
+import { getRequiredUserContext } from "@/lib/user-context";
 
 interface VisitDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -16,22 +16,10 @@ export const dynamic = "force-dynamic";
 export default async function VisitDetailsPage({
   params,
 }: VisitDetailsPageProps) {
-  const session = await getSession();
-  if (!session || !session.userId) redirect("/login");
+  const { userId, isStaff } = await getRequiredUserContext();
 
   const visitId = (await params).id;
 
-  // 1. Sprawdź rolę
-  const userId = session.userId as string;
-
-  const currentUser = await db.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-  const role = currentUser?.role?.trim().toLowerCase() || "guest";
-  const isStaff = role === "admin" || role === "vet";
-
-  // 2. Pobierz dane
   const visit = await db.visit.findUnique({
     where: { id: visitId },
     include: {
@@ -42,10 +30,19 @@ export default async function VisitDetailsPage({
 
   if (!visit) return notFound();
 
-  // 3. Zabezpieczenie
-  if (!isStaff && visit.pet.ownerId !== session.userId) {
+  if (!isStaff && visit.pet.ownerId !== userId) {
     return notFound();
   }
+
+  const sanitizedVisit = {
+    ...visit,
+    diagnosis: visit.diagnosis ?? "",
+    pet: {
+      ...visit.pet,
+      breed: visit.pet.breed ?? "",
+      species: visit.pet.species ?? "Nieznany",
+    },
+  };
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -57,8 +54,8 @@ export default async function VisitDetailsPage({
         Wróć do terminarza
       </Link>
 
-      {/* Używamy menedżera zamiast surowego HTML */}
-      <VisitDetailsManager visit={visit} isStaff={isStaff} />
+      {/* wyczyszczone dane */}
+      <VisitDetailsManager visit={sanitizedVisit} isStaff={!!isStaff} />
     </div>
   );
 }

@@ -14,7 +14,6 @@ export default function VisitStatusActions({
   const [isPending, startTransition] = useTransition();
   const [isAccepting, setIsAccepting] = useState(false);
 
-  // Tryb ustalania ceny
   if (isAccepting) {
     return (
       <form
