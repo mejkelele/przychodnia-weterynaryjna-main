@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
+import { getVisitPrice } from "@/lib/constants";
 // ==========================================
 // 🐶 SEKCJA ZWIERZAKI (PETS)
 // ==========================================
@@ -107,13 +107,13 @@ export async function deletePetAction(petId: string) {
 // 🩺 SEKCJA WIZYTY (VISITS)
 // ==========================================
 
-// Tego brakowało w Twoim kodzie - to dodaje wizytę do bazy
 export async function createVisitAction(formData: FormData) {
   const session = await getSession();
   if (!session || !session.userId) throw new Error("Brak autoryzacji");
 
   const userId = session.userId as string;
-
+  
+  // Sprawdzamy rolę
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { role: true },
@@ -126,9 +126,15 @@ export async function createVisitAction(formData: FormData) {
   const dateStr = formData.get("date") as string;
   const type = formData.get("type") as string;
 
-  // NOWE: Pobieramy cenę (jeśli Vet ją wpisał)
-  const priceRaw = formData.get("price") as string;
-  const price = isStaff && priceRaw ? parseFloat(priceRaw) : 0;
+  // LOGIKA CENOWA:
+  // 1. Pobieramy cenę bazową z cennika
+  let finalPrice = getVisitPrice(type);
+  
+  // 2. Jeśli wizytę tworzy Weterynarz i wpisał inną cenę ręcznie, nadpisujemy ją
+  const manualPrice = formData.get("price") as string;
+  if (isStaff && manualPrice) {
+    finalPrice = parseFloat(manualPrice);
+  }
 
   if (!petId || !description || !dateStr || !type) {
     throw new Error("Wypełnij wymagane pola");
@@ -141,13 +147,12 @@ export async function createVisitAction(formData: FormData) {
       type,
       date: new Date(dateStr),
       status: isStaff ? "confirmed" : "pending",
-      price: price, // Zapisujemy cenę od razu
+      price: finalPrice, // <-- Tutaj wchodzi cena automatyczna lub ręczna
       vetId: isStaff ? userId : undefined,
     },
   });
 
   revalidatePath(`/pets/${petId}`);
-  revalidatePath("/pets");
   revalidatePath("/visits");
 }
 
@@ -232,4 +237,37 @@ export async function editVisitAction(formData: FormData) {
 
   revalidatePath(`/visits/${visitId}`);
   revalidatePath("/visits");
+}
+
+// ==========================================
+// 👤 SEKCJA UŻYTKOWNIK (PROFILE)
+// ==========================================
+
+export async function updateUserAction(formData: FormData) {
+  const session = await getSession();
+  // Sprawdzamy czy użytkownik jest zalogowany
+  if (!session || !session.userId) throw new Error("Brak autoryzacji");
+
+  const name = formData.get("name") as string;
+  const lastName = formData.get("lastName") as string;
+  const phone = formData.get("phone") as string;
+  const address = formData.get("address") as string;
+
+  // Walidacja podstawowa
+  if (!name || !lastName) {
+    throw new Error("Imię i nazwisko są wymagane.");
+  }
+
+  await db.user.update({
+    where: { id: session.userId as string },
+    data: {
+      name,
+      lastName,
+      phone,
+      address,
+    },
+  });
+
+  // Odświeżamy ścieżkę, aby zobaczyć zmiany od razu
+  revalidatePath("/dashboard/profile");
 }

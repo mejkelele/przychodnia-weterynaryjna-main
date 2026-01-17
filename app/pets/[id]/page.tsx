@@ -215,6 +215,12 @@ export default async function PetPage({ params }: PetPageProps) {
                   <Stethoscope className="w-5 h-5" />
                   Historia leczenia
                 </Link>
+                <Link
+                  href={`/pets/${pet.id}/history`}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm hover:shadow-green-100"
+                >
+                  Drukuj historię leczenia
+                </Link>
 
                 {canManage && (
                   <div className="flex items-center gap-2 w-full sm:w-auto mt-2 pt-2 border-t sm:border-t-0 border-gray-100">
@@ -225,6 +231,7 @@ export default async function PetPage({ params }: PetPageProps) {
                       <Pencil className="w-4 h-4" />
                       Edytuj
                     </Link>
+                    
                     <DeletePetButton petId={pet.id} />
                   </div>
                 )}

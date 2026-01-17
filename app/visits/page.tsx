@@ -31,40 +31,45 @@ export default async function VisitsPage({
     select: { role: true },
   });
   const role = user?.role?.trim().toLowerCase() || "guest";
-  const isStaff = role === "admin" || role === "vet";
+
+  // --- ZABEZPIECZENIE ---
+  // Jeśli użytkownik NIE jest weterynarzem ani adminem, wyrzucamy go do dashboardu.
+  // Dzięki temu klient nie zobaczy listy wszystkich wizyt w przychodni.
+  if (role !== "vet" && role !== "admin") {
+    redirect("/dashboard");
+  }
+
+  // Skoro tu jesteśmy, to wiemy, że to personel
+  const isStaff = true; 
 
   const params = await searchParams;
   const petQuery = params.petQuery || "";
   const ownerQuery = params.ownerQuery || "";
   const showPast = params.showPast === "true";
-  const statusParam = params.status || ""; // Odczytujemy status
+  const statusParam = params.status || "";
   const rawVetParam = params.vetId;
-  const sortDirection = params.sort === "desc" ? "desc" : "asc"; // Tylko kierunek
+  const sortDirection = params.sort === "desc" ? "desc" : "asc";
 
+  // Logika filtrowania lekarza (domyślnie weterynarz widzi swoje wizyty, chyba że wybierze "wszystkie")
   let vetIdFilter: string | undefined = undefined;
   if (rawVetParam === "all") vetIdFilter = undefined;
   else if (rawVetParam) vetIdFilter = rawVetParam;
-  else if (isStaff && role === "vet") vetIdFilter = userId;
+  else if (role === "vet") vetIdFilter = userId;
 
-  // 4. Lista lekarzy
-  const vets = isStaff
-    ? await db.user.findMany({
-        where: { role: "vet" },
-        select: { id: true, name: true, lastName: true },
-      })
-    : [];
+  // Lista lekarzy (do paska filtrów)
+  const vets = await db.user.findMany({
+    where: { role: "vet" },
+    select: { id: true, name: true, lastName: true },
+  });
 
-  // 5. WHERE
+  // Budowanie zapytania do bazy
   const whereClause: Prisma.VisitWhereInput = {
     AND: [
-      !isStaff ? { pet: { ownerId: userId } } : {},
       !showPast ? { date: { gte: new Date() } } : {},
-
-      // Filtr po Statusie (NOWE)
       statusParam ? { status: statusParam } : {},
-
       petQuery ? { pet: { name: { contains: petQuery } } } : {},
-      isStaff && ownerQuery
+      // Personel może szukać też po nazwisku właściciela
+      ownerQuery
         ? {
             pet: {
               owner: {
@@ -81,10 +86,9 @@ export default async function VisitsPage({
     ],
   };
 
-  // 6. Pobranie danych (Sortowanie tylko po dacie)
   const visits = await db.visit.findMany({
     where: whereClause,
-    orderBy: { date: sortDirection }, // 'asc' lub 'desc'
+    orderBy: { date: sortDirection },
     include: {
       pet: {
         select: {
@@ -110,7 +114,7 @@ export default async function VisitsPage({
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Terminarz Wizyt
+              Grafik Wizyt (Personel)
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm text-gray-500">

@@ -1,155 +1,203 @@
-import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { User, Stethoscope, Calendar, Settings } from "lucide-react";
+import { 
+  LucideCalendar, 
+  LucideDog, 
+  LucideStethoscope, 
+  LucideTrendingUp,
+  LucideClock,
+  LucideUser
+} from "lucide-react";
 
 export default async function DashboardPage() {
-  // sprawdzanie sesji
   const session = await getSession();
-  if (!session || !session.userId) {
-    redirect("/login");
-  }
+  if (!session?.userId) redirect("/login");
 
-  // pobieranie danych o userze
-  const user = await db.user.findUnique({
-    where: { id: session.userId as string },
-    include: {
-      pets: true,
-      vetVisits: {
-        // dla weterynarza pobiera wizyty
-        include: { pet: true, vet: true },
-        take: 5,
-        orderBy: { date: "desc" },
+  const userId = session.userId as string;
+  const role = session.role as string;
+
+  // 1. WIDOK WETERYNARZA / ADMINA
+  if (role === "vet" || role === "admin") {
+    // Pobieramy wizyty na DZIŚ
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todayVisits = await db.visit.findMany({
+      where: {
+        date: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
       },
-    },
-  });
+      include: {
+        pet: { include: { owner: true } },
+      },
+      orderBy: { date: "asc" },
+    });
 
-  if (!user) {
-    redirect("/login");
-  }
+    return (
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
+        <header className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Panel Lekarza</h1>
+            <p className="text-gray-500">Miłego dyżuru! Dzisiaj jest {new Date().toLocaleDateString("pl-PL")}</p>
+          </div>
+          <div className="flex gap-3">
+             <Link href="/visits" className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium text-sm">
+               Pełny Kalendarz
+             </Link>
+             <Link href="/dashboard/profile" className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium text-sm">
+               Mój Profil
+             </Link>
+          </div>
+        </header>
 
-  const isVet = user.role === "vet" || user.role === "admin";
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Witaj, {user.name}!
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Twoja rola:{" "}
-          <span className="font-semibold text-blue-600">
-            {isVet ? "Weterynarz" : "Właściciel"}
-          </span>
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* szybkie akcje */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-              <User className="w-6 h-6" />
+        {/* Statystyki Szybkie */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
+              <LucideStethoscope size={24} />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Twoje konto</h3>
+            <div>
+              <p className="text-sm text-gray-500">Wizyty dzisiaj</p>
+              <p className="text-2xl font-bold">{todayVisits.length}</p>
+            </div>
           </div>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>Email: {user.email}</p>
-            <p>Telefon: {user.phone || "Brak"}</p>
-          </div>
-          <div className="mt-6">
-            <button className="text-sm font-medium text-blue-600 hover:underline">
-              Edytuj profil TODO
-            </button>
-          </div>
+           {/* Można tu dodać więcej kafelków (np. przychód dzienny) */}
         </div>
 
-        {/* Staty i zwierzaki */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 md:col-span-2">
-          {isVet ? (
-            // widok dla weta
-            <>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-green-100 rounded-lg text-green-600">
-                  <Stethoscope className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Ostatnie wizyty
-                </h3>
-              </div>
-              {user.vetVisits.length > 0 ? (
-                <ul className="divide-y divide-gray-100">
-                  {user.vetVisits.map((visit) => (
-                    <li
-                      key={visit.id}
-                      className="py-3 flex justify-between text-sm"
-                    >
-                      <div>
-                        <span className="font-medium text-gray-900">
-                          {visit.pet.name}
-                        </span>
-                        <span className="text-gray-500"> ({visit.type})</span>
-                      </div>
-                      <span className="text-gray-400">
-                        {new Date(visit.date).toLocaleDateString("pl-PL")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 text-sm">Brak ostatnich wizyt.</p>
-              )}
-              <div className="mt-4">
-                <Link
-                  href="/visits"
-                  className="text-sm font-medium text-blue-600 hover:underline"
-                >
-                  Wszystkie wizyty &rarr;
-                </Link>
-              </div>
-            </>
+        {/* Lista na dziś */}
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <LucideClock className="text-blue-500" /> Harmonogram na dziś
+            </h2>
+          </div>
+          
+          {todayVisits.length === 0 ? (
+            <div className="p-10 text-center text-gray-500">
+              Brak wizyt zaplanowanych na dzisiaj. Czas na kawę? ☕
+            </div>
           ) : (
-            // widok dla ownera
-            <>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-                  <User className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Twoje Zwierzaki
-                </h3>
-              </div>
-              {user.pets.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {user.pets.map((pet) => (
-                    <Link
-                      key={pet.id}
-                      href={`/pets/${pet.id}`}
-                      className="block p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition"
-                    >
-                      <p className="font-bold text-gray-900">{pet.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {pet.species} • {pet.breed || "Mieszaniec"}
+            <div className="divide-y">
+              {todayVisits.map((visit) => (
+                <div key={visit.id} className="p-4 hover:bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="text-center min-w-[60px]">
+                      <span className="block text-lg font-bold text-gray-800">
+                        {new Date(visit.date).toLocaleTimeString("pl-PL", { hour: '2-digit', minute:'2-digit' })}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-blue-900">{visit.pet.name} ({visit.pet.species})</h3>
+                      <p className="text-sm text-gray-600">
+                        Właściciel: {visit.pet.owner.name} {visit.pet.owner.lastName}
                       </p>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-gray-500 mb-3">
-                    Nie masz jeszcze przypisanych zwierzaków.
-                  </p>
-                  <Link
-                    href="/pets/add"
-                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                      <span className="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 mt-1">
+                        {visit.type}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    href={`/visits/${visit.id}`} 
+                    className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white bg-gray-50"
                   >
-                    Dodaj zwierzaka
+                    Otwórz Kartę
                   </Link>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // 2. WIDOK WŁAŚCICIELA (KLIENTA)
+  // Pobieramy dane użytkownika wraz z relacjami
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { 
+      pets: true,
+      vetVisits: false // Klient nie jest weterynarzem, więc to pole może być puste
+    }, 
+  });
+
+  // Pobieramy najbliższe wizyty dla zwierząt tego klienta
+  const upcomingVisits = await db.visit.findMany({
+    where: {
+      pet: { ownerId: userId },
+      date: { gte: new Date() },
+      status: { not: "cancelled" }
+    },
+    include: { pet: true },
+    orderBy: { date: "asc" },
+    take: 3
+  });
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
+      {/* Karta Powitalna */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Cześć, {user?.name}! 👋
+          </h1>
+          <p className="text-gray-500">Oto centrum zarządzania zdrowiem Twoich pupili.</p>
+        </div>
+        <Link 
+          href="/dashboard/profile" 
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg transition font-medium flex items-center gap-2"
+        >
+          <LucideUser size={18} /> Edytuj profil
+        </Link>
+      </div>
+      
+      {/* Skróty */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Karta Zwierzaki */}
+        <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100 hover:shadow-md transition relative overflow-hidden">
+          <LucideDog className="absolute right-4 top-4 text-blue-100 w-24 h-24 -z-0" />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2 relative z-10">Twoje Zwierzaki</h2>
+          <p className="text-blue-700 mb-6 relative z-10">
+            Masz zarejestrowanych: <span className="font-bold">{user?.pets.length}</span> pupili.
+          </p>
+          <Link 
+            href="/pets" 
+            className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 relative z-10"
+          >
+            Zobacz listę
+          </Link>
+        </div>
+
+        {/* Karta Wizyty */}
+        <div className="bg-gradient-to-br from-green-50 to-white p-6 rounded-xl border border-green-100 hover:shadow-md transition relative overflow-hidden">
+          <LucideCalendar className="absolute right-4 top-4 text-green-100 w-24 h-24 -z-0" />
+          <h2 className="text-lg font-semibold text-green-900 mb-2 relative z-10">Najbliższe wizyty</h2>
+          
+          <div className="space-y-3 mb-4 relative z-10">
+             {upcomingVisits.length === 0 ? (
+               <p className="text-sm text-green-700">Brak nadchodzących wizyt.</p>
+             ) : (
+               upcomingVisits.map(visit => (
+                 <div key={visit.id} className="text-sm bg-white/60 p-2 rounded border border-green-100">
+                    <span className="font-bold">{new Date(visit.date).toLocaleDateString()}</span> - {visit.pet.name}
+                 </div>
+               ))
+             )}
+          </div>
+
+          <Link 
+            href="/visits/add" 
+            className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 relative z-10"
+          >
+            Umów wizytę
+          </Link>
         </div>
       </div>
     </div>
