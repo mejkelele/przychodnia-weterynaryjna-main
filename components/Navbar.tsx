@@ -35,6 +35,12 @@ export default async function Navbar() {
                   >
                     Pacjenci
                   </Link>
+                  <Link
+                    href="/visits"
+                    className="text-gray-600 hover:text-blue-600 transition"
+                  >
+                    Terminarz
+                  </Link>
                 </div>
                 <form action={logoutAction}>
                   <button className="text-sm font-medium text-red-600 hover:text-red-800 transition">

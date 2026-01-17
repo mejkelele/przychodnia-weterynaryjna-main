@@ -8,18 +8,28 @@ const publicRoutes = ["/login", "/register", "/"];
 
 export default async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.some((route) => path.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    path.startsWith(route)
+  );
   const isPublicRoute = publicRoutes.includes(path);
 
+  // 1. Sprawdzamy czy ciastko istnieje
   const cookie = req.cookies.get("session")?.value;
+
+  // 2. Próbujemy je odszyfrować
   const session = await decrypt(cookie);
 
-  // 1. Użytkownik nie jest zalogowany i próbuje wejść na chronioną trasę -> redirect do login
+  // --- DEBUGGING (Patrz w terminal!) ---
+  console.log(`[Middleware] Path: ${path}`);
+  console.log(`[Middleware] Cookie found: ${!!cookie}`);
+  console.log(`[Middleware] Decrypted UserID:`, session?.userId);
+  // -------------------------------------
+
   if (isProtectedRoute && !session?.userId) {
+    console.log("Redirecting to login..."); // Debug
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
-  // 2. Użytkownik jest zalogowany i próbuje wejść na login/register -> redirect do dashboard
   if (isPublicRoute && session?.userId && path !== "/") {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
   }

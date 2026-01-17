@@ -14,7 +14,7 @@ model User {
   name      String   
   lastName  String   
   email     String   @unique
-  password  String   // NOWE POLE
+  password  String
   phone     String?
   role      String   @default("owner") // "owner" | "vet" | "admin"
   address   String?  
@@ -56,8 +56,8 @@ model Visit {
   petId       String
   pet         Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
 
-  vetId       String
-  vet         User     @relation("VetVisits", fields: [vetId], references: [id])
+  vetId       String?
+  vet         User?     @relation("VetVisits", fields: [vetId], references: [id])
   
   createdAt   DateTime @default(now())
 }

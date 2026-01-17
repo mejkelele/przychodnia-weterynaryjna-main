@@ -3,19 +3,53 @@
 import { useState } from "react";
 import { createPetAction } from "@/lib/actions";
 import Link from "next/link";
-import { ArrowLeft, Save } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  UserPlus,
+  FileText,
+  Image as ImageIcon,
+} from "lucide-react";
 
-export default function AddPetPage() {
+type Owner = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+};
+
+type Props = {
+  userRole: string;
+  owners: Owner[];
+};
+
+const INPUT_CLASS =
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white";
+
+export default function AddPetForm({ userRole, owners }: Props) {
   const [loading, setLoading] = useState(false);
+
+  // stan dla admina
+  const [createNewOwner, setCreateNewOwner] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
-    await createPetAction(formData);
+    try {
+      // walidacja i przekierowanie
+      await createPetAction(formData);
+    } catch (error) {
+      console.error("Błąd zapisu:", error);
+      alert("Wystąpił błąd podczas dodawania pacjenta.");
+      setLoading(false);
+    }
   }
 
+  const isStaff = ["ADMIN", "EMPLOYEE", "VET"].includes(userRole);
+  const isAdmin = userRole === "ADMIN";
+
   return (
-    <div className="max-w-2xl mx-auto mb-10">
-      {/* Nagłówek z powrotem */}
+    <div className="max-w-3xl mx-auto mb-16">
+      {/* header */}
       <div className="flex items-center gap-4 mb-8">
         <Link
           href="/pets"
@@ -25,42 +59,49 @@ export default function AddPetPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Nowy pacjent</h1>
-          <p className="text-gray-500 text-sm">
-            Wprowadź dane właściciela i zwierzaka
-          </p>
         </div>
       </div>
 
-      {/* Formularz - action={handleSubmit} pozwala używać Server Actions w Client Component */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
         <form action={handleSubmit} className="space-y-8">
-          {/* dane */}
+          {/* stan ui do serwera */}
+          <input
+            type="hidden"
+            name="isNewOwnerMode"
+            value={createNewOwner.toString()}
+          />
+
+          {/* dane zwierzaka */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              Dane Pacjenta
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              Dane Podstawowe
             </h3>
+
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {/* imię */}
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Imię zwierzaka
+                  Imię zwierzaka *
                 </label>
                 <input
                   name="petName"
                   required
                   type="text"
-                  placeholder="np. Reksio"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                  placeholder="np. Burek"
+                  className={INPUT_CLASS}
                 />
               </div>
 
-              {/* Gatunek */}
+              {/* rodzaj */}
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gatunek
+                  Rodzaj *
                 </label>
                 <select
                   name="species"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition bg-white"
+                  className={INPUT_CLASS}
+                  defaultValue="pies"
                 >
                   <option value="pies">Pies</option>
                   <option value="kot">Kot</option>
@@ -68,176 +109,267 @@ export default function AddPetPage() {
                 </select>
               </div>
 
-              {/* Rasa */}
+              {/* rasa */}
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Rasa
                 </label>
                 <input
                   name="breed"
-                  required
                   type="text"
-                  placeholder="np. Mieszaniec"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                  placeholder="np. Owczarek Niemiecki"
+                  className={INPUT_CLASS}
                 />
               </div>
 
-              {/* Płeć */}
+              {/* płeć */}
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Płeć
+                  Płeć *
                 </label>
-                <select
-                  name="sex"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition bg-white"
-                >
+                <select name="sex" className={INPUT_CLASS}>
                   <option value="male">Samiec</option>
                   <option value="female">Samica</option>
+                  <option value="unknown">Nieznana</option>
                 </select>
               </div>
 
-              {/* Data urodzenia */}
+              {/* data urodzenia */}
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data urodzenia
+                  Data urodzenia *
                 </label>
                 <input
                   name="birthDate"
                   required
                   type="date"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                  className={INPUT_CLASS}
                 />
               </div>
 
-              {/* Waga */}
+              {/* waga */}
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Waga (kg)
+                  Waga (kg) *
                 </label>
                 <input
                   name="weight"
                   required
                   type="number"
-                  step="0.1"
-                  placeholder="0.0"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className={INPUT_CLASS}
                 />
               </div>
 
-              {/* URL zdjęcia */}
+              {/* url ze zdjęciem */}
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL zdjęcia
+                  Link do zdjęcia (opcjonalne)
                 </label>
-                <input
-                  name="imageUrl"
-                  type="url"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"></div>
+                  <input
+                    name="imageUrl"
+                    type="url"
+                    placeholder="https://..."
+                    className={`${INPUT_CLASS} pl-10`}
+                  />
+                </div>
               </div>
 
-              {/* Notatki */}
+              {/* notatki */}
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Notatki
                 </label>
                 <textarea
                   name="notes"
-                  rows={2}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                  rows={3}
+                  className={INPUT_CLASS}
+                  placeholder="Dodatkowe informacje o zwierzaku..."
                 />
               </div>
             </div>
           </div>
 
-          {/* SEKCJA 2: DANE WŁAŚCICIELA */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              Dane Właściciela
-            </h3>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Imię
-                </label>
-                <input
-                  name="ownerName"
-                  required
-                  type="text"
-                  placeholder="Jan"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+          {/* właściciel */}
+          <div className="pt-6 border-t border-gray-100">
+            {/* jeżeli user patrzy */}
+            {!isStaff && (
+              <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl text-sm flex items-start gap-3">
+                <div className="bg-blue-100 p-1.5 rounded-full shrink-0">
+                  <UserPlus className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold">Automatyczne przypisanie</p>
+                  <p className="text-blue-700/80">
+                    Ten zwierzak zostanie dodany do Twojego konta.
+                  </p>
+                </div>
               </div>
+            )}
 
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nazwisko
-                </label>
-                <input
-                  name="ownerLastName"
-                  required
-                  type="text"
-                  placeholder="Kowalski"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+            {/* jeżeli admin patrzy */}
+            {isStaff && (
+              <div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-blue-600" />
+                    Dane Właściciela
+                  </h3>
 
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  name="ownerEmail"
-                  required
-                  type="email"
-                  placeholder="jan@example.com"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+                  {isAdmin && (
+                    <div className="inline-flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setCreateNewOwner(false)}
+                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                          !createNewOwner
+                            ? "bg-white shadow-sm text-gray-900"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        Wybierz z listy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCreateNewOwner(true)}
+                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                          createNewOwner
+                            ? "bg-white shadow-sm text-gray-900"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        Nowy klient
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Telefon
-                </label>
-                <input
-                  name="ownerPhone"
-                  required
-                  type="tel"
-                  placeholder="123 456 789"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+                {!createNewOwner && (
+                  <div className="animate-in fade-in zoom-in-95 duration-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Wybierz klienta z bazy *
+                    </label>
+                    <select
+                      name="ownerId"
+                      required={!createNewOwner}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="">-- Wyszukaj właściciela --</option>
+                      {owners.map((owner) => (
+                        <option key={owner.id} value={owner.id}>
+                          {owner.lastName} {owner.firstName} &mdash;{" "}
+                          {owner.email}
+                        </option>
+                      ))}
+                    </select>
+                    {!isAdmin && (
+                      <p className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded border border-gray-200 inline-block">
+                        ℹ️ Jako pracownik możesz przypisywać zwierzęta tylko do
+                        istniejących klientów.
+                      </p>
+                    )}
+                  </div>
+                )}
 
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adres
-                </label>
-                <input
-                  name="ownerAddress"
-                  required
-                  type="text"
-                  placeholder="ul. Wiejska 1, 00-001 Warszawa"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                {/* B.2: tworzenie nowego właściciela */}
+                {createNewOwner && isAdmin && (
+                  <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 grid grid-cols-1 gap-4 sm:grid-cols-2 animate-in slide-in-from-top-2 duration-300">
+                    <div className="col-span-2 mb-2 pb-2 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">
+                        Szybka rejestracja właściciela
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        To konto nie będzie miało dostępu do logowania (tylko
+                        dane kontaktowe).
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Imię *
+                      </label>
+                      <input
+                        name="ownerName"
+                        required={createNewOwner}
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Nazwisko *
+                      </label>
+                      <input
+                        name="ownerLastName"
+                        required={createNewOwner}
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Email *
+                      </label>
+                      <input
+                        name="ownerEmail"
+                        type="email"
+                        required={createNewOwner}
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Telefon *
+                      </label>
+                      <input
+                        name="ownerPhone"
+                        type="tel"
+                        required={createNewOwner}
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Adres
+                      </label>
+                      <input
+                        name="ownerAddress"
+                        className={INPUT_CLASS}
+                        placeholder="Ulica, miasto..."
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
 
-          {/* PRZYCISKI */}
-          <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+          {/* buttony */}
+          <div className="pt-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white sm:static p-4 sm:p-0 -mx-6 sm:mx-0 border-t sm:border-t-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sm:shadow-none">
             <Link
               href="/pets"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition"
+              className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm"
             >
               Anuluj
             </Link>
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Save className="w-4 h-4" />
-              {loading ? "Zapisywanie..." : "Zapisz pacjenta"}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Zapisywanie...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Zapisz pacjenta
+                </>
+              )}
             </button>
           </div>
         </form>

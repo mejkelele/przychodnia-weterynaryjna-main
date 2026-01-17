@@ -1,69 +1,235 @@
-// lib/actions.ts
 "use server";
 
-import { createPet, createUser } from "@/lib/api"; // Upewnij się, że te funkcje są w lib/api.ts
+import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
-import { getSession } from "@/lib/session"; // Importujemy sesję
+
+// ==========================================
+// 🐶 SEKCJA ZWIERZAKI (PETS)
+// ==========================================
 
 export async function createPetAction(formData: FormData) {
   const session = await getSession();
-  
-  // Sprawdzamy czy użytkownik jest zalogowany
-  if (!session || !session.userId) {
-    redirect("/login");
+  if (!session || !session.userId) return;
+
+  const role = session.role as string;
+  const userId = session.userId as string; // Fix typów
+
+  let ownerId = formData.get("ownerId") as string;
+
+  // SCENARIUSZ 1: Zwykły właściciel dodaje swojego zwierzaka
+  if (role === "owner") {
+    ownerId = userId;
   }
 
-  let ownerId = session.userId as string;
+  // SCENARIUSZ 2: Admin/Vet tworzy klienta bez konta
+  const isNewOwnerMode = formData.get("isNewOwnerMode") === "true";
 
-  // Tutaj logika może być rozbudowana:
-  // Jeśli to Weterynarz, może przesłać 'ownerId' w formularzu lub stworzyć nowego usera.
-  // Na razie uprośćmy: jeśli wypełniono dane właściciela, tworzymy nowego (jak było), 
-  // ALE jeśli pola są puste, zakładamy, że to zalogowany user dodaje swojego zwierzaka.
-
-  const ownerEmail = formData.get("ownerEmail") as string;
-
-  // Jeśli podano email właściciela, a zalogowany to np. weterynarz (lub logika tworzenia nowego usera)
-  if (ownerEmail && ownerEmail.trim() !== "") {
-     const newOwner = await createUser({
-      name: formData.get("ownerName") as string,
-      lastName: formData.get("ownerLastName") as string,
-      email: ownerEmail,
-      phone: formData.get("ownerPhone") as string,
-      password: "temp-password-123", // Hasło tymczasowe lub wymagane pole
-      role: "owner",
-      address: formData.get("ownerAddress") as string,
+  if ((role === "admin" || role === "vet") && isNewOwnerMode) {
+    const newUser = await db.user.create({
+      data: {
+        name: formData.get("ownerName") as string,
+        lastName: formData.get("ownerLastName") as string,
+        email: formData.get("ownerEmail") as string,
+        phone: formData.get("ownerPhone") as string,
+        address: formData.get("ownerAddress") as string,
+        role: "owner",
+        password: "konto_techniczne_brak_hasla", // Wymagane przez bazę
+      },
     });
-    ownerId = newOwner.id;
+    ownerId = newUser.id;
   }
 
-  // Tworzenie zwierzaka
-  await createPet({
-    ownerId: ownerId,
-    name: formData.get("petName") as string,
-    species: formData.get("species") as "pies" | "kot" | "inne",
-    sex: formData.get("sex") as "male" | "female",
-    breed: formData.get("breed") as string,
-    weight: parseFloat(formData.get("weight") as string),
-    birthDate: formData.get("birthDate") as string,
-    notes: formData.get("notes") as string,
-    imageUrl: formData.get("imageUrl") as string,
+  if (!ownerId) {
+    throw new Error("Błąd: Nie udało się przypisać właściciela.");
+  }
+
+  await db.pet.create({
+    data: {
+      name: formData.get("petName") as string,
+      species: formData.get("species") as string,
+      breed: formData.get("breed") as string,
+      sex: formData.get("sex") as string,
+      birthDate: new Date(formData.get("birthDate") as string),
+      weight: parseFloat(formData.get("weight") as string),
+      imageUrl: (formData.get("imageUrl") as string) || "",
+      notes: (formData.get("notes") as string) || "",
+      ownerId: ownerId,
+    },
   });
 
   revalidatePath("/pets");
-  revalidatePath("/dashboard");
-  redirect("/dashboard"); // Przekierowanie do panelu
+  redirect("/pets");
 }
 
 export async function deletePetAction(petId: string) {
-  // Opcjonalnie: sprawdź czy user ma prawo usunąć (np. jest właścicielem)
-  await db.pet.delete({
-    where: {
-      id: petId,
+  const session = await getSession();
+  if (!session || !session.userId) return;
+
+  const userId = session.userId as string;
+
+  // Pobieramy rolę, żeby zabezpieczyć backend
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = user?.role?.trim().toLowerCase();
+
+  // ZABEZPIECZENIE: Weterynarz nie może usuwać
+  if (role === "vet") {
+    throw new Error("Weterynarz nie może usuwać kartotek.");
+  }
+
+  // ZABEZPIECZENIE: Owner może usuwać tylko swoje
+  if (role === "owner") {
+    const pet = await db.pet.findUnique({
+      where: { id: petId },
+      select: { ownerId: true },
+    });
+    if (!pet || pet.ownerId !== userId) {
+      throw new Error("Nie masz uprawnień do usunięcia tego zwierzaka.");
+    }
+  }
+
+  try {
+    await db.pet.delete({
+      where: { id: petId },
+    });
+    revalidatePath("/pets");
+  } catch (error) {
+    console.error("Błąd usuwania:", error);
+    throw new Error("Nie udało się usunąć zwierzęcia");
+  }
+}
+
+// ==========================================
+// 🩺 SEKCJA WIZYTY (VISITS)
+// ==========================================
+
+// Tego brakowało w Twoim kodzie - to dodaje wizytę do bazy
+export async function createVisitAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || !session.userId) throw new Error("Brak autoryzacji");
+
+  const userId = session.userId as string;
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = user?.role?.trim().toLowerCase() || "guest";
+  const isStaff = role === "admin" || role === "vet";
+
+  const petId = formData.get("petId") as string;
+  const description = formData.get("description") as string;
+  const dateStr = formData.get("date") as string;
+  const type = formData.get("type") as string;
+
+  // NOWE: Pobieramy cenę (jeśli Vet ją wpisał)
+  const priceRaw = formData.get("price") as string;
+  const price = isStaff && priceRaw ? parseFloat(priceRaw) : 0;
+
+  if (!petId || !description || !dateStr || !type) {
+    throw new Error("Wypełnij wymagane pola");
+  }
+
+  await db.visit.create({
+    data: {
+      petId,
+      description,
+      type,
+      date: new Date(dateStr),
+      status: isStaff ? "confirmed" : "pending",
+      price: price, // Zapisujemy cenę od razu
+      vetId: isStaff ? userId : undefined,
     },
   });
+
+  revalidatePath(`/pets/${petId}`);
   revalidatePath("/pets");
-  revalidatePath("/dashboard");
-  redirect("/pets");
+  revalidatePath("/visits");
+}
+
+export async function acceptVisitAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || !session.userId) throw new Error("Brak autoryzacji");
+
+  const userId = session.userId as string;
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = user?.role?.trim().toLowerCase();
+
+  if (role !== "vet" && role !== "admin") {
+    throw new Error("Brak uprawnień do akceptacji wizyt.");
+  }
+
+  const visitId = formData.get("visitId") as string;
+  const priceRaw = formData.get("price") as string;
+  const price = parseFloat(priceRaw);
+
+  if (!visitId || isNaN(price)) {
+    throw new Error("Błędne dane (brak ID lub ceny).");
+  }
+
+  await db.visit.update({
+    where: { id: visitId },
+    data: {
+      status: "confirmed",
+      vetId: userId, // Przypisujemy lekarza, który kliknął
+      price: price, // Ustawiamy cenę
+    },
+  });
+
+  revalidatePath("/pets");
+}
+
+export async function rejectVisitAction(visitId: string) {
+  const session = await getSession();
+  if (!session || !session.userId) return;
+
+  // Opcjonalnie: można dodać sprawdzenie czy to admin/vet/właściciel wizyty
+  await db.visit.update({
+    where: { id: visitId },
+    data: { status: "cancelled" },
+  });
+
+  revalidatePath("/pets");
+}
+export async function editVisitAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || !session.userId) throw new Error("Brak autoryzacji");
+
+  const user = await db.user.findUnique({
+    where: { id: session.userId as string },
+    select: { role: true },
+  });
+  const role = user?.role?.trim().toLowerCase();
+
+  // Zabezpieczenie: Tylko personel może edytować dane medyczne/ceny
+  if (role !== "vet" && role !== "admin") {
+    throw new Error("Brak uprawnień do edycji.");
+  }
+
+  const visitId = formData.get("visitId") as string;
+  const description = formData.get("description") as string;
+  const diagnosis = formData.get("diagnosis") as string;
+  const price = parseFloat(formData.get("price") as string);
+  const status = formData.get("status") as string; // Pozwalamy też zmienić status ręcznie
+
+  await db.visit.update({
+    where: { id: visitId },
+    data: {
+      description,
+      diagnosis,
+      price,
+      status,
+    },
+  });
+
+  revalidatePath(`/visits/${visitId}`);
+  revalidatePath("/visits");
 }

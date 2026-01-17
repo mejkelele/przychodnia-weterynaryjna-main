@@ -175,7 +175,10 @@ async function main() {
 
   for (const user of users) {
     await prisma.user.create({
-      data: user,
+      data: {
+        ...user,
+        password: "zaq1@WSX",
+      },
     });
   }
   console.log(`Added ${users.length} users`);
