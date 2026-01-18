@@ -128,6 +128,11 @@ export async function createVisitAction(formData: FormData) {
   if (!petId || !description || !dateStr || !type) {
     throw new Error("Wypełnij wymagane pola");
   }
+  const visitDate = new Date(dateStr);
+  const now = new Date();
+  if (visitDate < new Date(now.getTime() - 60000)) {
+    throw new Error("Nie można umówić wizyty z datą wsteczną.");
+  }
 
   await db.visit.create({
     data: {

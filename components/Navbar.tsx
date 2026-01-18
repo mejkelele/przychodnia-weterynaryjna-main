@@ -30,14 +30,13 @@ export default async function Navbar() {
                 >
                   Pulpit
                 </Link>
-                {isVet && (
-                  <Link
-                    href="/visits"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium flex items-center gap-1"
-                  >
-                    <LucideCalendar size={16} /> Grafik Wizyt
-                  </Link>
-                )}
+                <Link
+                  href="/visits"
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium flex items-center gap-1"
+                >
+                  <LucideCalendar size={16} /> 
+                  {isVet ? "Grafik Wizyt" : "Moje Wizyty"}
+                </Link>
                 <Link
                   href="/pets"
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium"

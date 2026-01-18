@@ -32,15 +32,9 @@ export default async function VisitsPage({
   });
   const role = user?.role?.trim().toLowerCase() || "guest";
 
-  // --- ZABEZPIECZENIE ---
-  // Jeśli użytkownik NIE jest weterynarzem ani adminem, wyrzucamy go do dashboardu.
-  // Dzięki temu klient nie zobaczy listy wszystkich wizyt w przychodni.
-  if (role !== "vet" && role !== "admin") {
-    redirect("/dashboard");
-  }
-
-  // Skoro tu jesteśmy, to wiemy, że to personel
-  const isStaff = true; 
+  // --- ZMIANA: Usunięto sztywne przekierowanie dla non-vet ---
+  // Definiujemy czy to personel
+  const isStaff = role === "vet" || role === "admin";
 
   const params = await searchParams;
   const petQuery = params.petQuery || "";
@@ -50,26 +44,23 @@ export default async function VisitsPage({
   const rawVetParam = params.vetId;
   const sortDirection = params.sort === "desc" ? "desc" : "asc";
 
-  // Logika filtrowania lekarza (domyślnie weterynarz widzi swoje wizyty, chyba że wybierze "wszystkie")
   let vetIdFilter: string | undefined = undefined;
   if (rawVetParam === "all") vetIdFilter = undefined;
   else if (rawVetParam) vetIdFilter = rawVetParam;
   else if (role === "vet") vetIdFilter = userId;
 
-  // Lista lekarzy (do paska filtrów)
   const vets = await db.user.findMany({
     where: { role: "vet" },
     select: { id: true, name: true, lastName: true },
   });
 
-  // Budowanie zapytania do bazy
   const whereClause: Prisma.VisitWhereInput = {
     AND: [
       !showPast ? { date: { gte: new Date() } } : {},
       statusParam ? { status: statusParam } : {},
       petQuery ? { pet: { name: { contains: petQuery } } } : {},
-      // Personel może szukać też po nazwisku właściciela
-      ownerQuery
+      // Szukanie po właścicielu dostępne tylko dla personelu
+      (isStaff && ownerQuery)
         ? {
             pet: {
               owner: {
@@ -83,6 +74,8 @@ export default async function VisitsPage({
           }
         : {},
       vetIdFilter ? { vetId: vetIdFilter } : {},
+      // --- NOWE: Jeśli nie personel, pokaż tylko wizyty usera ---
+      !isStaff ? { pet: { ownerId: userId } } : {},
     ],
   };
 
@@ -114,7 +107,7 @@ export default async function VisitsPage({
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Grafik Wizyt (Personel)
+              {isStaff ? "Grafik Wizyt (Personel)" : "Moje Wizyty"}
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm text-gray-500">
@@ -129,7 +122,7 @@ export default async function VisitsPage({
           className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-medium transition-colors shadow-sm text-sm"
         >
           <Plus className="w-5 h-5" />
-          Dodaj wizytę
+          {isStaff ? "Dodaj wizytę" : "Umów wizytę"}
         </Link>
       </div>
 

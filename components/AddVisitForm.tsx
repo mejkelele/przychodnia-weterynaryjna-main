@@ -111,6 +111,7 @@ export default function AddVisitForm({
                 name="date"
                 required
                 defaultValue={defaultDate}
+                min = {defaultDate}
                 className="w-full pl-10 rounded-lg border-gray-300 text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
