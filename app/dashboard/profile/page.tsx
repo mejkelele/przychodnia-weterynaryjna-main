@@ -4,18 +4,20 @@ import { updateUserAction } from "@/lib/actions";
 import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {
-  // 1. Pobieramy sesję
   const session = await getSession();
   if (!session?.userId) redirect("/login");
 
-  // 2. Pobieramy aktualne dane użytkownika z bazy
   const user = await db.user.findUnique({
     where: { id: session.userId as string },
   });
 
+  // --- POPRAWKA TUTAJ ---
+  // Jeśli sesja istnieje, ale użytkownika nie ma w bazie (np. stara sesja),
+  // przekieruj natychmiast do logowania, zamiast pokazywać błąd.
   if (!user) {
-    return <div className="p-6">Błąd: Nie znaleziono użytkownika.</div>;
+    redirect("/login");
   }
+  // ----------------------
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -58,9 +60,6 @@ export default async function ProfilePage() {
               disabled
               className="w-full p-2 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Skontaktuj się z administratorem, aby zmienić adres email.
-            </p>
           </div>
 
           <div>

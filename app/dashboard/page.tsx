@@ -6,7 +6,6 @@ import {
   LucideCalendar, 
   LucideDog, 
   LucideStethoscope, 
-  LucideTrendingUp,
   LucideClock,
   LucideUser
 } from "lucide-react";
@@ -18,9 +17,15 @@ export default async function DashboardPage() {
   const userId = session.userId as string;
   const role = session.role as string;
 
+  // Sprawdzamy czy użytkownik istnieje w bazie
+  // Jeśli nie - przekierowujemy do logowania
+  const userCheck = await db.user.findUnique({ where: { id: userId } });
+  if (!userCheck) {
+    redirect("/login");
+  }
+
   // 1. WIDOK WETERYNARZA / ADMINA
   if (role === "vet" || role === "admin") {
-    // Pobieramy wizyty na DZIŚ
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
@@ -56,7 +61,6 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        {/* Statystyki Szybkie */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
             <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
@@ -67,10 +71,8 @@ export default async function DashboardPage() {
               <p className="text-2xl font-bold">{todayVisits.length}</p>
             </div>
           </div>
-           {/* Można tu dodać więcej kafelków (np. przychód dzienny) */}
         </div>
 
-        {/* Lista na dziś */}
         <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -119,16 +121,16 @@ export default async function DashboardPage() {
   }
 
   // 2. WIDOK WŁAŚCICIELA (KLIENTA)
-  // Pobieramy dane użytkownika wraz z relacjami
   const user = await db.user.findUnique({
     where: { id: userId },
     include: { 
       pets: true,
-      vetVisits: false // Klient nie jest weterynarzem, więc to pole może być puste
     }, 
   });
 
-  // Pobieramy najbliższe wizyty dla zwierząt tego klienta
+  // Dodatkowe zabezpieczenie (choć userCheck wyżej już to załatwił)
+  if (!user) redirect("/login");
+
   const upcomingVisits = await db.visit.findMany({
     where: {
       pet: { ownerId: userId },
@@ -142,11 +144,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
-      {/* Karta Powitalna */}
       <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
-            Cześć, {user?.name}! 👋
+            Cześć, {user.name}! 👋
           </h1>
           <p className="text-gray-500">Oto centrum zarządzania zdrowiem Twoich pupili.</p>
         </div>
@@ -158,14 +159,12 @@ export default async function DashboardPage() {
         </Link>
       </div>
       
-      {/* Skróty */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Karta Zwierzaki */}
         <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100 hover:shadow-md transition relative overflow-hidden">
           <LucideDog className="absolute right-4 top-4 text-blue-100 w-24 h-24 -z-0" />
           <h2 className="text-lg font-semibold text-blue-900 mb-2 relative z-10">Twoje Zwierzaki</h2>
           <p className="text-blue-700 mb-6 relative z-10">
-            Masz zarejestrowanych: <span className="font-bold">{user?.pets.length}</span> pupili.
+            Masz zarejestrowanych: <span className="font-bold">{user.pets.length}</span> pupili.
           </p>
           <Link 
             href="/pets" 
@@ -175,7 +174,6 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Karta Wizyty */}
         <div className="bg-gradient-to-br from-green-50 to-white p-6 rounded-xl border border-green-100 hover:shadow-md transition relative overflow-hidden">
           <LucideCalendar className="absolute right-4 top-4 text-green-100 w-24 h-24 -z-0" />
           <h2 className="text-lg font-semibold text-green-900 mb-2 relative z-10">Najbliższe wizyty</h2>
