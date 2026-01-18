@@ -231,7 +231,7 @@ export default async function PetPage({ params }: PetPageProps) {
                       <Pencil className="w-4 h-4" />
                       Edytuj
                     </Link>
-                    
+
                     <DeletePetButton petId={pet.id} />
                   </div>
                 )}

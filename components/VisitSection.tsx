@@ -11,9 +11,9 @@ import {
   CheckCircle,
   Clock,
   Stethoscope,
-  AlertCircle,
   X,
   Check,
+  CalendarClock, // Dodano nową ikonę
 } from "lucide-react";
 
 interface Visit {
@@ -43,10 +43,164 @@ export default function VisitSection({
 }: VisitSectionProps) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-
   const [acceptingVisitId, setAcceptingVisitId] = useState<string | null>(null);
 
   const isStaff = userRole === "admin" || userRole === "vet";
+
+  // --- LOGIKA SORTOWANIA I PODZIAŁU ---
+  const now = new Date();
+
+  // 1. Sortowanie chronologiczne (od najstarszej)
+  const sortedVisits = [...visits].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+
+  // 2. Podział na przeszłe i przyszłe
+  const pastVisits = sortedVisits.filter((v) => new Date(v.date) < now);
+  const upcomingVisits = sortedVisits.filter((v) => new Date(v.date) >= now);
+
+  // Funkcja pomocnicza do renderowania pojedynczej wizyty (żeby nie powielać kodu)
+  const renderVisitCard = (visit: Visit) => (
+    <div
+      key={visit.id}
+      className={`relative p-5 rounded-xl border transition-all mb-4 ${
+        visit.status === "confirmed"
+          ? "bg-white border-gray-200 shadow-sm"
+          : "bg-yellow-50 border-yellow-200"
+      }`}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-2 rounded-lg ${
+              visit.status === "confirmed"
+                ? "bg-blue-100 text-blue-600"
+                : "bg-yellow-100 text-yellow-600"
+            }`}
+          >
+            {visit.status === "confirmed" ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <Clock className="w-5 h-5" />
+            )}
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 capitalize">{visit.type}</p>
+            <p className="text-xs text-gray-500">
+              {new Date(visit.date).toLocaleDateString("pl-PL", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        </div>
+
+        <span
+          className={`text-xs font-medium px-2 py-1 rounded capitalize ${
+            visit.status === "confirmed"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {visit.status === "pending" ? "Oczekuje na lekarza" : visit.status}
+        </span>
+      </div>
+
+      {/* Szczegóły */}
+      <div className="space-y-2 text-sm text-gray-600 pl-12">
+        <p>
+          <span className="font-medium text-gray-900">Opis:</span>{" "}
+          {visit.description}
+        </p>
+
+        <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500 border-t pt-2">
+          {visit.vet ? (
+            <span className="flex items-center gap-1 text-blue-700 font-medium bg-blue-50 px-2 py-1 rounded">
+              <Stethoscope className="w-3 h-3" /> Lek. {visit.vet.name}{" "}
+              {visit.vet.lastName}
+            </span>
+          ) : (
+            <span className="italic">Lekarz nieprzypisany</span>
+          )}
+
+          {visit.price > 0 && (
+            <span className="font-medium bg-green-50 text-green-700 px-2 py-1 rounded">
+              Koszt: {visit.price} PLN
+            </span>
+          )}
+        </div>
+      </div>
+
+      {isStaff && visit.status === "pending" && (
+        <div className="mt-4 pt-3 border-t border-yellow-200">
+          {acceptingVisitId === visit.id ? (
+            <form
+              action={async (formData) => {
+                await acceptVisitAction(formData);
+                setAcceptingVisitId(null);
+              }}
+              className="flex items-end gap-2 bg-white p-3 rounded-lg border border-yellow-300 shadow-sm"
+            >
+              <input type="hidden" name="visitId" value={visit.id} />
+
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Ustal cenę (PLN)
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  required
+                  className="w-full text-sm border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="bg-green-600 hover:bg-green-700 text-white p-2 rounded transition-colors"
+                title="Potwierdź i przejmij"
+              >
+                <Check className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setAcceptingVisitId(null)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-600 p-2 rounded transition-colors"
+                title="Anuluj"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </form>
+          ) : (
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setAcceptingVisitId(visit.id)}
+                className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 shadow-sm flex items-center gap-1"
+              >
+                <CheckCircle className="w-3 h-3" /> Przyjmij wizytę
+              </button>
+
+              <button
+                onClick={() =>
+                  startTransition(async () => await rejectVisitAction(visit.id))
+                }
+                disabled={isPending}
+                className="px-3 py-1.5 bg-white border border-gray-300 text-red-600 text-xs font-medium rounded hover:bg-red-50"
+              >
+                Odrzuć
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="mt-8 border-t pt-8">
@@ -56,6 +210,7 @@ export default function VisitSection({
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* LEWA KOLUMNA: FORMULARZ */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm sticky top-4">
             <h3 className="font-semibold text-gray-900 mb-4">
@@ -138,13 +293,14 @@ export default function VisitSection({
                 {isPending
                   ? "Przetwarzanie..."
                   : isStaff
-                  ? "Dodaj (jako potwierdzoną)"
-                  : "Wyślij prośbę o wizytę"}
+                    ? "Dodaj (jako potwierdzoną)"
+                    : "Wyślij prośbę o wizytę"}
               </button>
             </form>
           </div>
         </div>
 
+        {/* PRAWA KOLUMNA: LISTA WIZYT */}
         <div className="lg:col-span-2 space-y-4">
           {visits.length === 0 ? (
             <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
@@ -152,154 +308,26 @@ export default function VisitSection({
               <p className="text-gray-500">Brak historii wizyt.</p>
             </div>
           ) : (
-            visits.map((visit) => (
-              <div
-                key={visit.id}
-                className={`relative p-5 rounded-xl border transition-all ${
-                  visit.status === "confirmed"
-                    ? "bg-white border-gray-200 shadow-sm"
-                    : "bg-yellow-50 border-yellow-200"
-                }`}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        visit.status === "confirmed"
-                          ? "bg-blue-100 text-blue-600"
-                          : "bg-yellow-100 text-yellow-600"
-                      }`}
-                    >
-                      {visit.status === "confirmed" ? (
-                        <CheckCircle className="w-5 h-5" />
-                      ) : (
-                        <Clock className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 capitalize">
-                        {visit.type}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(visit.date).toLocaleDateString("pl-PL", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
+            <>
+              {/* 1. WIZYTY PRZESZŁE */}
+              {pastVisits.map((visit) => renderVisitCard(visit))}
+
+              {/* SEPARATOR (Linia + Napis) */}
+              {upcomingVisits.length > 0 && (
+                <div className="relative flex items-center justify-center my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t-2 border-dashed border-blue-200"></div>
                   </div>
-
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded capitalize ${
-                      visit.status === "confirmed"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {visit.status === "pending"
-                      ? "Oczekuje na lekarza"
-                      : visit.status}
-                  </span>
-                </div>
-
-                {/* Szczegóły */}
-                <div className="space-y-2 text-sm text-gray-600 pl-12">
-                  <p>
-                    <span className="font-medium text-gray-900">Opis:</span>{" "}
-                    {visit.description}
-                  </p>
-
-                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500 border-t pt-2">
-                    {/* Wyświetlaj lekarza tylko jak jest przypisany */}
-                    {visit.vet ? (
-                      <span className="flex items-center gap-1 text-blue-700 font-medium bg-blue-50 px-2 py-1 rounded">
-                        <Stethoscope className="w-3 h-3" /> Lek.{" "}
-                        {visit.vet.name} {visit.vet.lastName}
-                      </span>
-                    ) : (
-                      <span className="italic">Lekarz nieprzypisany</span>
-                    )}
-
-                    {visit.price > 0 && (
-                      <span className="font-medium bg-green-50 text-green-700 px-2 py-1 rounded">
-                        Koszt: {visit.price} PLN
-                      </span>
-                    )}
+                  <div className="relative bg-white px-4 py-1 text-sm font-bold text-blue-600 border border-blue-200 rounded-full flex items-center gap-2">
+                    <CalendarClock className="w-4 h-4" />
+                    NADCHODZĄCE WIZYTY
                   </div>
                 </div>
+              )}
 
-                {isStaff && visit.status === "pending" && (
-                  <div className="mt-4 pt-3 border-t border-yellow-200">
-                    {acceptingVisitId === visit.id ? (
-                      <form
-                        action={async (formData) => {
-                          await acceptVisitAction(formData);
-                          setAcceptingVisitId(null);
-                        }}
-                        className="flex items-end gap-2 bg-white p-3 rounded-lg border border-yellow-300 shadow-sm"
-                      >
-                        <input type="hidden" name="visitId" value={visit.id} />
-
-                        <div className="flex-1">
-                          <label className="block text-xs font-medium text-gray-500 mb-1">
-                            Ustal cenę (PLN)
-                          </label>
-                          <input
-                            type="number"
-                            name="price"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            required
-                            className="w-full text-sm border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
-                          />
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="bg-green-600 hover:bg-green-700 text-white p-2 rounded transition-colors"
-                          title="Potwierdź i przejmij"
-                        >
-                          <Check className="w-5 h-5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAcceptingVisitId(null)}
-                          className="bg-gray-200 hover:bg-gray-300 text-gray-600 p-2 rounded transition-colors"
-                          title="Anuluj"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </form>
-                    ) : (
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setAcceptingVisitId(visit.id)}
-                          className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 shadow-sm flex items-center gap-1"
-                        >
-                          <CheckCircle className="w-3 h-3" /> Przyjmij wizytę
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            startTransition(
-                              async () => await rejectVisitAction(visit.id)
-                            )
-                          }
-                          disabled={isPending}
-                          className="px-3 py-1.5 bg-white border border-gray-300 text-red-600 text-xs font-medium rounded hover:bg-red-50"
-                        >
-                          Odrzuć
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
+              {/* 2. WIZYTY PRZYSZŁE */}
+              {upcomingVisits.map((visit) => renderVisitCard(visit))}
+            </>
           )}
         </div>
       </div>
