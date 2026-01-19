@@ -6,59 +6,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 // SEKCJA ZWIERZAKI
-
-export async function createPetAction(prevState: any, formData: FormData) {
-  const session = await getSession();
-  if (!session?.userId) return { error: "Brak autoryzacji" };
-
-  const isStaff = session.role === "vet" || session.role === "admin";
-
-  const name = formData.get("name") as string;
-  const species = formData.get("species") as string;
-  const breed = formData.get("breed") as string;
-  const birthDateStr = formData.get("birthDate") as string;
-  const sex = formData.get("sex") as string;
-  const weightStr = formData.get("weight") as string;
-  const formOwnerId = formData.get("ownerId") as string;
-  const imageUrl = formData.get("imageUrl") as string;
-  const notes = formData.get("notes") as string;
-  if (!name || !species || !birthDateStr || !weightStr) {
-    return { error: "Wypełnij wymagane pola." };
-  }
-
-  let finalOwnerId: string = session.userId as string;
-
-  if (isStaff && formOwnerId) {
-    finalOwnerId = formOwnerId;
-  }
-
-  try {
-    await db.pet.create({
-      data: {
-        name,
-        species,
-        breed: breed || null,
-        birthDate: new Date(birthDateStr),
-        sex,
-        weight: parseFloat(weightStr),
-        ownerId: finalOwnerId,
-        imageUrl: imageUrl || null,
-        notes: notes || null,
-      },
-    });
-
-    revalidatePath("/pets");
-    revalidatePath("/dashboard");
-    redirect("/pets");
-  } catch (error) {
-    console.error("Błąd tworzenia zwierzaka:", error);
-    if ((error as Error).message === "NEXT_REDIRECT") {
-      throw error;
-    }
-    return { error: "Wystąpił błąd podczas dodawania zwierzaka." };
-  }
-}
-
 export async function deletePetAction(petId: string) {
   const session = await getSession();
   if (!session || !session.userId) return;
@@ -71,9 +18,7 @@ export async function deletePetAction(petId: string) {
   });
   const role = user?.role?.trim().toLowerCase();
 
-  if (role === "vet") {
-    throw new Error("Weterynarz nie może usuwać kartotek.");
-  }
+
 
   if (role === "owner") {
     const pet = await db.pet.findUnique({
