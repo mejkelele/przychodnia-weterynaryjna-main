@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Page, Text, View, Document, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { LucidePrinter, LucideLoader2 } from 'lucide-react';
 
-// === POPRAWKA TUTAJ: Rejestrujemy różne warianty czcionki (Regular, Bold, Italic) ===
 Font.register({
   family: 'Roboto',
   fonts: [
@@ -84,7 +83,6 @@ const MedicalDoc = ({ pet }: PDFProps) => (
 
       <Text style={styles.sectionTitle}>PRZEBIEG LECZENIA</Text>
       {pet.visits.length === 0 ? (
-        // To właśnie ta linijka powodowała błąd (fontStyle: 'italic')
         <Text style={{ fontStyle: 'italic', color: '#666', marginTop: 10 }}>Brak zarejestrowanych wizyt.</Text>
       ) : (
         pet.visits.map((visit: any, index: number) => (
@@ -131,7 +129,6 @@ export default function DownloadHistoryButton({ pet }: PDFProps) {
       fileName={`Historia_${pet.name}_${new Date().toISOString().slice(0,10)}.pdf`}
       className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition font-bold no-underline"
     >
-      {/* @ts-ignore */}
       {({ loading }: { loading: boolean }) => (
          loading ? (
            <>

@@ -17,14 +17,13 @@ export default async function DashboardPage() {
   const userId = session.userId as string;
   const role = session.role as string;
 
-  // Sprawdzamy czy użytkownik istnieje w bazie
-  // Jeśli nie - przekierowujemy do logowania
+  // brak uzytkownika -> logowanie
   const userCheck = await db.user.findUnique({ where: { id: userId } });
   if (!userCheck) {
     redirect("/login");
   }
 
-  // 1. WIDOK WETERYNARZA / ADMINA
+  // widok weta
   if (role === "vet" || role === "admin") {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -120,15 +119,15 @@ export default async function DashboardPage() {
     );
   }
 
-  // 2. WIDOK WŁAŚCICIELA (KLIENTA)
+  // widok klienta
   const user = await db.user.findUnique({
     where: { id: userId },
     include: { 
       pets: true,
     }, 
   });
-
-  // Dodatkowe zabezpieczenie (choć userCheck wyżej już to załatwił)
+  
+  // dodatkowe zabezpieczenie
   if (!user) redirect("/login");
 
   const upcomingVisits = await db.visit.findMany({

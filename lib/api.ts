@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { Pet, Visit, User, VisitType, VisitStatus } from "@/types";
 
-// READ
-
 export async function getAllPets(): Promise<Pet[]> {
   const pets = await db.pet.findMany({
     orderBy: { createdAt: "desc" },
@@ -50,7 +48,6 @@ export async function getVisitsByPetId(petId: string): Promise<Visit[]> {
   }));
 }
 
-// WRITE
 
 type CreatePetData = Omit<Pet, "id" | "ownerId"> & { ownerId: string }; // typ pomocniczy do tworzenia zwierzaczka
 

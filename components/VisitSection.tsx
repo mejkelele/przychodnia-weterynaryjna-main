@@ -13,7 +13,7 @@ import {
   Stethoscope,
   X,
   Check,
-  CalendarClock, // Dodano nową ikonę
+  CalendarClock, 
 } from "lucide-react";
 
 interface Visit {
@@ -47,19 +47,16 @@ export default function VisitSection({
 
   const isStaff = userRole === "admin" || userRole === "vet";
 
-  // --- LOGIKA SORTOWANIA I PODZIAŁU ---
   const now = new Date();
 
-  // 1. Sortowanie chronologiczne (od najstarszej)
+// sortowanie chronologicznie
   const sortedVisits = [...visits].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 
-  // 2. Podział na przeszłe i przyszłe
   const pastVisits = sortedVisits.filter((v) => new Date(v.date) < now);
   const upcomingVisits = sortedVisits.filter((v) => new Date(v.date) >= now);
 
-  // Funkcja pomocnicza do renderowania pojedynczej wizyty (żeby nie powielać kodu)
   const renderVisitCard = (visit: Visit) => (
     <div
       key={visit.id}
@@ -109,7 +106,7 @@ export default function VisitSection({
         </span>
       </div>
 
-      {/* Szczegóły */}
+      {/* szczegoly */}
       <div className="space-y-2 text-sm text-gray-600 pl-12">
         <p>
           <span className="font-medium text-gray-900">Opis:</span>{" "}
@@ -210,7 +207,7 @@ export default function VisitSection({
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEWA KOLUMNA: FORMULARZ */}
+        {/* formularz */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm sticky top-4">
             <h3 className="font-semibold text-gray-900 mb-4">
@@ -300,7 +297,7 @@ export default function VisitSection({
           </div>
         </div>
 
-        {/* PRAWA KOLUMNA: LISTA WIZYT */}
+        {/* lista wizyt */}
         <div className="lg:col-span-2 space-y-4">
           {visits.length === 0 ? (
             <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
@@ -309,10 +306,9 @@ export default function VisitSection({
             </div>
           ) : (
             <>
-              {/* 1. WIZYTY PRZESZŁE */}
+              {/* przeszle wizyty */}
               {pastVisits.map((visit) => renderVisitCard(visit))}
 
-              {/* SEPARATOR (Linia + Napis) */}
               {upcomingVisits.length > 0 && (
                 <div className="relative flex items-center justify-center my-8">
                   <div className="absolute inset-0 flex items-center">
@@ -325,7 +321,7 @@ export default function VisitSection({
                 </div>
               )}
 
-              {/* 2. WIZYTY PRZYSZŁE */}
+              {/* przyszle wizyty */}
               {upcomingVisits.map((visit) => renderVisitCard(visit))}
             </>
           )}

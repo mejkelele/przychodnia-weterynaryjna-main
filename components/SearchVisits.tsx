@@ -61,7 +61,7 @@ export default function SearchVisits({
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-8 p-4 max-w-6xl mx-auto">
       <div className="flex flex-col gap-4">
-        {/* Wiersz 1: Wyszukiwarki Tekstowe */}
+        {/* wyszukiwanie teskstowe */}
         <div className="flex flex-col md:flex-row gap-0 border rounded-xl overflow-hidden border-gray-200">
           <div className="relative flex-1 group bg-white">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -95,10 +95,10 @@ export default function SearchVisits({
           )}
         </div>
 
-        {/* Wiersz 2: Filtry (Lewa) i Sortowanie (Prawa) */}
+        {/* filtry i sortowanie */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            {/* 1. Filtr Statusu (NOWE) */}
+          <div className="flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto">
+            {/* status */}
             <div className="relative w-full sm:w-48 group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <ListFilter className="h-4 w-4 text-gray-400" />
@@ -116,13 +116,14 @@ export default function SearchVisits({
               </select>
             </div>
 
+            {/* lekarz */}
             {isStaff && (
               <div className="relative w-full sm:w-48 group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Filter className="h-4 w-4 text-gray-400" />
                 </div>
                 <select
-                  className="block w-full pl-10 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 cursor-pointer text-gray-700 appearance-none shadow-sm"
+                  className="block w-full pl-10 pr-2 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 cursor-pointer text-gray-700 appearance-none shadow-sm truncate"
                   value={vetId}
                   onChange={(e) => handleSearch("vetId", e.target.value)}
                 >
@@ -136,7 +137,7 @@ export default function SearchVisits({
               </div>
             )}
 
-            {/* 3. Checkbox Historia */}
+            {/* historia */}
             <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors select-none w-full sm:w-auto justify-center sm:justify-start">
               <input
                 type="checkbox"
@@ -150,7 +151,7 @@ export default function SearchVisits({
             </label>
           </div>
 
-          {/* PRAWA STRONA: SORTOWANIE (Tylko Data) */}
+          {/* sortowanie */}
           <div className="w-full sm:w-auto flex justify-end">
             <button
               onClick={toggleDateSort}

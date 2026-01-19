@@ -71,7 +71,7 @@ export default function AddVisitForm({
       </div>
 
       <form action={handleSubmit} className="space-y-6">
-        {/* wybór zwierzaka */}
+        {/* wybor zwierzaka */}
         {preselectedPetId ? (
           <input type="hidden" name="petId" value={preselectedPetId} />
         ) : (

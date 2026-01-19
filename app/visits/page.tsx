@@ -32,8 +32,6 @@ export default async function VisitsPage({
   });
   const role = user?.role?.trim().toLowerCase() || "guest";
 
-  // --- ZMIANA: Usunięto sztywne przekierowanie dla non-vet ---
-  // Definiujemy czy to personel
   const isStaff = role === "vet" || role === "admin";
 
   const params = await searchParams;
@@ -59,7 +57,6 @@ export default async function VisitsPage({
       !showPast ? { date: { gte: new Date() } } : {},
       statusParam ? { status: statusParam } : {},
       petQuery ? { pet: { name: { contains: petQuery } } } : {},
-      // Szukanie po właścicielu dostępne tylko dla personelu
       (isStaff && ownerQuery)
         ? {
             pet: {
@@ -74,7 +71,6 @@ export default async function VisitsPage({
           }
         : {},
       vetIdFilter ? { vetId: vetIdFilter } : {},
-      // --- NOWE: Jeśli nie personel, pokaż tylko wizyty usera ---
       !isStaff ? { pet: { ownerId: userId } } : {},
     ],
   };

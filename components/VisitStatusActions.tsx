@@ -57,7 +57,6 @@ export default function VisitStatusActions({
     );
   }
 
-  // Domyślne przyciski
   return (
     <div className="flex gap-3">
       <button

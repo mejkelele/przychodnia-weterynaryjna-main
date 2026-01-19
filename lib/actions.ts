@@ -5,11 +5,7 @@ import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-// ==========================================
-// 🐶 SEKCJA ZWIERZAKI (PETS)
-// ==========================================
-
-// W pliku lib/actions.ts
+// SEKCJA ZWIERZAKI
 
 export async function createPetAction(prevState: any, formData: FormData) {
   const session = await getSession();
@@ -100,9 +96,8 @@ export async function deletePetAction(petId: string) {
   }
 }
 
-// ==========================================
-// 🩺 SEKCJA WIZYTY (VISITS)
-// ==========================================
+
+//  SEKCJA WIZYTY
 
 export async function createVisitAction(formData: FormData) {
   const session = await getSession();
@@ -233,9 +228,7 @@ export async function editVisitAction(formData: FormData) {
   revalidatePath("/visits");
 }
 
-// ==========================================
-// 👤 SEKCJA UŻYTKOWNIK (PROFILE)
-// ==========================================
+// SEKCJA UŻYTKOWNIK
 
 export async function updateUserAction(formData: FormData) {
   const session = await getSession();
@@ -280,7 +273,7 @@ export async function updatePetAction(prevState: any, formData: FormData) {
   const imageUrl = formData.get("imageUrl") as string;
 
   try {
-    // 1. Sprawdzenie uprawnień (czy to właściciel lub personel)
+    // sprawdzenie uprawnien
     const pet = await db.pet.findUnique({ where: { id: petId } });
 
     if (!pet) return { error: "Zwierzak nie istnieje." };
@@ -292,7 +285,7 @@ export async function updatePetAction(prevState: any, formData: FormData) {
       return { error: "Brak uprawnień do edycji tego zwierzaka." };
     }
 
-    // 2. Aktualizacja
+    // aktualizacja
     await db.pet.update({
       where: { id: petId },
       data: {
@@ -310,10 +303,10 @@ export async function updatePetAction(prevState: any, formData: FormData) {
     revalidatePath(`/pets/${petId}`);
     revalidatePath("/pets");
 
-    // Zwracamy sukces, aby komponent mógł zrobić przekierowanie
     return { success: true, petId };
   } catch (error) {
     console.error(error);
     return { error: "Błąd podczas aktualizacji danych." };
   }
 }
+

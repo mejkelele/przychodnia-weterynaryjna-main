@@ -12,7 +12,7 @@ export default async function Navbar() {
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* LEWA STRONA: LOGO + MENU */}
+          {/* logo menu */}
           <div className="flex items-center">
             <Link
               href={"/"}
@@ -47,12 +47,10 @@ export default async function Navbar() {
             )}
           </div>
 
-          {/* PRAWA STRONA: PANEL + WYLOGUJ */}
+          {/* panel/wyloguj */}
           <div className="flex items-center gap-4">
             {session?.userId ? (
               <div className="flex items-center gap-6">
-                {/* 2. ZMIANA: Usunięto ikonkę profilu (LucideUser) */}
-
                 <form action={logoutAction}>
                   <button
                     className="text-gray-400 hover:text-red-600 transition flex items-center"
