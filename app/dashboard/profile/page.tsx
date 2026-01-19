@@ -11,13 +11,10 @@ export default async function ProfilePage() {
     where: { id: session.userId as string },
   });
 
-  // --- POPRAWKA TUTAJ ---
-  // Jeśli sesja istnieje, ale użytkownika nie ma w bazie (np. stara sesja),
-  // przekieruj natychmiast do logowania, zamiast pokazywać błąd.
+
   if (!user) {
     redirect("/login");
   }
-  // ----------------------
 
   return (
     <div className="max-w-2xl mx-auto p-6">

@@ -3,14 +3,13 @@ import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LucideArrowLeft } from "lucide-react";
-import DownloadHistoryButton from "@/components/MedicalHistoryPDF"; // <--- NOWY IMPORT
+import DownloadHistoryButton from "@/components/MedicalHistoryPDF";
 
 export default async function MedicalHistoryPage({
   params,
 }: {
   params: { id: string };
 }) {
-  // Fix dla Next.js 15+ (await params)
   const resolvedParams = await params;
   const petId = resolvedParams.id;
 
@@ -42,11 +41,9 @@ export default async function MedicalHistoryPage({
           <LucideArrowLeft size={20} /> Wróć do profilu
         </Link>
 
-        {/* TU JEST NASZ NOWY PRZYCISK PDF */}
         <DownloadHistoryButton pet={pet} />
       </div>
 
-      {/* Podgląd HTML dla użytkownika (żeby widział co pobiera) */}
       <div className="max-w-4xl mx-auto p-8 my-8 bg-white shadow-lg rounded-xl border">
         <header className="border-b pb-6 mb-6 flex justify-between">
           <div>

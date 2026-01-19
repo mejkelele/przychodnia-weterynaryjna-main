@@ -26,7 +26,7 @@ export default async function PetsPage({
 
   const whereClause: Prisma.PetWhereInput = {
     AND: [
-      // 1. Ograniczenie widoczności (Owner widzi tylko swoje)
+      // widzi tylko swoje
       !isStaff ? { ownerId: userId } : {},
 
       // 2. Szukanie po imieniu zwierzaka

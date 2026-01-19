@@ -115,14 +115,14 @@ export default function VisitDetailsManager({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1 uppercase text-red-600">
+            <label className="block text-xs font-bold mb-1 uppercase text-red-600">
               Diagnoza lekarska
             </label>
             <textarea
               name="diagnosis"
               defaultValue={visit.diagnosis || ""}
               rows={4}
-              className="w-full rounded-lg border-red-200 bg-red-50 text-sm focus:border-red-500 focus:ring-red-200"
+              className="w-full rounded-lg border-red-200 bg-red-50 text-sm focus:border-red-500 focus:ring-red-200 p-3"
               placeholder="Wpisz diagnozę i zalecenia..."
             />
           </div>
@@ -199,9 +199,9 @@ export default function VisitDetailsManager({
         </div>
       </div>
 
-      {/* GRID DANYCH */}
+      {/* dane */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-gray-100">
-        {/* Pacjent */}
+        {/* pacjent */}
         <div className="bg-white p-6">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <PawPrint className="w-4 h-4" /> Pacjent
@@ -220,7 +220,7 @@ export default function VisitDetailsManager({
           </Link>
         </div>
 
-        {/* Właściciel */}
+        {/* wlasciciel */}
         <div className="bg-white p-6">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <User className="w-4 h-4" /> Właściciel
@@ -233,7 +233,7 @@ export default function VisitDetailsManager({
           )}
         </div>
 
-        {/* Lekarz */}
+        {/* lekarz */}
         <div className="bg-white p-6">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Stethoscope className="w-4 h-4" /> Lekarz Prowadzący
@@ -250,7 +250,7 @@ export default function VisitDetailsManager({
           )}
         </div>
 
-        {/* Cena */}
+        {/* cena */}
         <div className="bg-white p-6">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Banknote className="w-4 h-4" /> Koszt Wizyty
@@ -262,7 +262,7 @@ export default function VisitDetailsManager({
         </div>
       </div>
 
-      {/* OPIS I DIAGNOZA */}
+      {/* opis i diagnoza */}
       <div className="p-8 bg-white border-t border-gray-100 space-y-8">
         <div>
           <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">

@@ -1,5 +1,3 @@
-// app/visits/[id]/page.tsx
-
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";

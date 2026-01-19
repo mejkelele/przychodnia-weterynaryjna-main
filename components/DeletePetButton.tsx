@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { deletePetAction } from "@/lib/actions";
 import { Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface DeletePetButtonProps {
   petId: string;

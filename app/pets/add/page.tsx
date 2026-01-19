@@ -13,26 +13,21 @@ export default async function AddPetPage() {
     redirect("/login");
   }
 
-  // ZMIANA: Usunąłem całkowicie sekcję "where".
-  // Teraz pobierze KAŻDEGO użytkownika z bazy.
+  // pobieranie użytkowników z bazy
   const usersList = isStaff
     ? await db.user.findMany({
-        // where: { role: "owner" }, <--- USUNIĘTE, żeby nie blokowało wyników
         select: {
           id: true,
           name: true,
           lastName: true,
           email: true,
-          // Dodaję role do select, żebyś mógł podejrzeć w konsoli serwera co tam siedzi
           role: true,
         },
         orderBy: { lastName: "asc" },
       })
     : [];
 
-  // DIAGNOSTYKA SERWEROWA:
-  // Spójrz w terminal (tam gdzie odpaliłeś 'npm run dev'),
-  // zobaczysz jakie role mają twoi użytkownicy.
+// diagnostyka serwerowa
   if (isStaff) {
     console.log("Znalezieni użytkownicy w bazie:", usersList);
   }

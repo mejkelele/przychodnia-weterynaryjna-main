@@ -18,7 +18,7 @@ export default function OwnerSelect({ users }: OwnerSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const filteredUsers = useMemo(() => {
-    // Jeśli nic nie wpisano, pokaż pierwszych 5 (żebyś widział, że coś jest)
+    // jesli nie ma ostatnie 5
     if (!query) return users.slice(0, 5);
 
     return users.filter((user) => {
@@ -56,7 +56,7 @@ export default function OwnerSelect({ users }: OwnerSelectProps) {
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            // Używamy opóźnienia, żeby kliknięcie w listę zdążyło zadziałać
+            // opoznienie, zeby klikniecie w liste zaczelo dzialac
             onBlur={() => setTimeout(() => setIsOpen(false), 200)}
           />
         </div>
@@ -85,14 +85,13 @@ export default function OwnerSelect({ users }: OwnerSelectProps) {
         </div>
       )}
 
-      {/* Lista wyników */}
+      {/* lista wynikow */}
       {isOpen && !selectedId && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-auto">
           {filteredUsers.length > 0 ? (
             filteredUsers.map((user) => (
               <div
                 key={user.id}
-                // onMouseDown działa szybciej niż onBlur inputa
                 onMouseDown={() => {
                   setSelectedId(user.id);
                   setIsOpen(false);

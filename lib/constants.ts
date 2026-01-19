@@ -1,5 +1,3 @@
-// lib/constants.ts
-
 export const VISIT_TYPES = {
   konsultacja: { label: "Konsultacja ogólna", price: 120 },
   szczepienie: { label: "Szczepienie podstawowe", price: 80 },

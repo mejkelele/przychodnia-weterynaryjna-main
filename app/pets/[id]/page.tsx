@@ -17,15 +17,13 @@ import {
 } from "lucide-react";
 import DeletePetButton from "@/components/DeletePetButton";
 import Image from "next/image";
-// Upewnij się, że masz ten plik w lib/user-context.ts (wersja z isStaff)
 import { getRequiredUserContext } from "@/lib/user-context";
 
 interface PetPageProps {
   params: Promise<{ id: string }>;
 }
 
-// --- FUNKCJE POMOCNICZE (bez zmian) ---
-
+// formatowanie daty urodzenia
 function formatAge(birthDate: Date | string) {
   const birth = new Date(birthDate);
   const today = new Date();
@@ -84,14 +82,11 @@ function getActivityStatus(lastVisitDate?: Date) {
   return { label: "Nieaktywny", color: "bg-gray-100 text-gray-500" };
 }
 
-// --- GŁÓWNY KOMPONENT ---
-
 export default async function PetPage({ params }: PetPageProps) {
-  // 1. Pobieramy kontekst i flagę isStaff (czy to weterynarz/admin)
   const { userId, isStaff } = await getRequiredUserContext();
   const resolvedParams = await params;
 
-  // 2. Pobieramy dane z bazy
+  // pobranie danych z bazy
   const pet = await db.pet.findUnique({
     where: { id: resolvedParams.id },
     include: {
@@ -113,15 +108,13 @@ export default async function PetPage({ params }: PetPageProps) {
 
   if (!pet) return notFound();
 
-  // 3. SPRAWDZENIE BEZPIECZEŃSTWA (Tego brakowało!)
   const isPetOwner = pet.ownerId === userId;
 
-  // Jeśli NIE jesteś właścicielem I NIE jesteś personelem -> Blokada
+// brak praw -> out do /pet
   if (!isPetOwner && !isStaff) {
-    return notFound(); // Lub redirect('/pets')
+    return notFound();
   }
 
-  // 4. Logika UI
   const canManage = isPetOwner || isStaff;
   const ageString = formatAge(pet.birthDate);
   const lastVisit = pet.visits[0];
@@ -138,7 +131,7 @@ export default async function PetPage({ params }: PetPageProps) {
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEWA KOLUMNA (Zdjęcie, Wiek, Gatunek) */}
+        {/* LEWA KOLUMNA */}
         <div className="lg:col-span-1 space-y-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-center relative group">
             <div
@@ -184,7 +177,7 @@ export default async function PetPage({ params }: PetPageProps) {
           </div>
         </div>
 
-        {/* PRAWA KOLUMNA (Dane główne, Właściciel, Akcje) */}
+        {/* PRAWA KOLUMNA  */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8 border-b border-gray-100 pb-8">
